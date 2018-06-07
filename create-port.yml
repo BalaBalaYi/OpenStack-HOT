@@ -1,0 +1,29 @@
+heat_template_version: 2016-04-08
+
+description: Simple template to create a port
+
+parameters:
+  network:
+    type: string
+    label: network
+    description: Internel Network's id or name
+    default: admin_internal_net
+  subnet:
+    type: string
+    label: subnet
+    description: Internel Network subnet's id or name 
+    default: admin_internal_net__subnet
+  internal_ip:
+    type: string
+    label: internal_ip_address
+    description: The internal ip address you want. Cannot conflict with other IP in the subnet  
+    default: 192.168.111.111
+
+
+resources:
+  instance_port:
+    type: OS::Neutron::Port
+    properties:
+      name: "vm_port"
+      network: { get_param: network }
+      fixed_ips: [{"subnet": { get_param: subnet }, "ip_address": { get_param: internal_ip }}]

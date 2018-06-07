@@ -1,0 +1,109 @@
+heat_template_version: 2016-04-08
+
+description: The template to create a single network in a new tenant
+
+
+parameter_groups:
+- label: network
+  description: network params
+  parameters:
+  - netwrok_name
+  
+- label: sub network
+  description: sub network params
+  parameters:
+  - subnetwrok_name
+  - enable_dhcp_param
+  - cidr_param
+  - dns_nameservers_param
+  
+- label: router
+  description: router params
+  parameters:
+  - router_name
+  - external_gateway_info_network
+  - enable_router_ha
+  - enable_router_distributed
+
+parameters:
+  netwrok_name:
+    type: string
+    label: Network 's name
+    description: A user defined network name accroding to the current tenant
+    default: development_internal_net
+  subnetwrok_name:
+    type: string
+    label: Sub Network 's name
+    description: A user defined subnetwork name accroding to the current tenant
+    default: development_internal_net__subnet
+  router_name:
+    type: string
+    label: Router 's name
+    description: A user defined router name accroding to the current tenant
+    default: development_router
+  enable_dhcp_param:  
+    type: boolean
+    label: Enable subnet dhcp or not
+    description: The instance will be assigned ip addresss automatically by dhcp agent when dhcp is enabled
+    default: true
+  cidr_param:
+    type: string
+    label: Ip address pools
+    description: The ip which can be allocated to the instance
+    default: 192.168.111.0/24
+  dns_nameservers_param:
+    type: comma_delimited_list
+    label: DNS server list
+    description: The subnet 's dns servers list, separated by commas
+    default: 114.114.114.114
+  external_gateway_info_network:
+    type: string
+    label: External network 's id or name
+    description: ID or name of the external network for the gateway. Please make sure the external network you use exists!
+    default: admin_floating_net
+  enable_router_ha:  
+    type: boolean
+    label: Enable router ha or not
+    description: Enable High Availability features for Virtual Routers in Neutron. Requires at least 2 Controller nodes to function properly and addtional Neutron Advanced Configuration in Fuel
+    default: false
+  enable_router_distributed:  
+    type: boolean
+    label: Enable router distributed or not
+    description: Enable Distributed Virtual Routers in Neutron. Requires at least 2 Compute nodes to function properly and addtional Neutron Advanced Configuration in Fuel
+    default: false
+
+resources:
+  internal_net:
+    type: OS::Neutron::Net
+    properties:
+      name: { get_param: netwrok_name }
+      
+  internal_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: { get_param: subnetwrok_name }
+      network_id: { get_resource: internal_net }
+      enable_dhcp: { get_param: enable_dhcp_param }
+      cidr: { get_param: cidr_param }
+      dns_nameservers: { get_param: dns_nameservers_param }
+      
+  internal_router:
+    type: OS::Neutron::Router
+    properties:
+      name: { get_param: router_name }
+      external_gateway_info: { network: { get_param: external_gateway_info_network } }
+      ha: { get_param: enable_router_ha }
+      distributed: { get_param: enable_router_distributed }
+
+  internal_interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: internal_router }
+      subnet: { get_resource: internal_subnet }
+        
+
+#outputs:
+#  instance_ip:
+#    description: The IP address of the deployed instance
+#    value: { get_attr: [instance1, first_address] }  
+    

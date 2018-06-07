@@ -1,0 +1,63 @@
+heat_template_version: 2016-04-08
+
+description: Simple template to deploy a single compute instance
+
+parameters:
+  instance_name:
+    type: string
+    label: A User Defined Name
+    description: whatever a name u want
+    default: hahaha_testing
+  image_name:
+    type: string
+    label: Image Name
+    description: Image to be used for compute instance
+    default: TestVM
+  instance_type:
+    type: string
+    label: Flavor Name
+    description: Type of instance (flavor) to be used
+    default: m1.tiny
+    constraints:
+      - allowed_values: [ m1.tiny, m1.small ]
+        description: Value must be m1.tiny, m1.small
+  network:
+    type: string
+    label: network
+    description: Internel Network's id or name
+    default: admin_internal_net
+  subnet:
+    type: string
+    label: subnet
+    description: Internel Network subnet's id or name 
+    default: admin_internal_net__subnet
+  internal_ip:
+    type: string
+    label: internal_ip_address
+    description: The internal ip address you want. Cannot conflict with other IP in the subnet  
+    default: 192.168.111.111
+    
+
+resources:
+  instance_port:
+    type: OS::Neutron::Port
+    properties:
+      name: "vm_port"
+      network: { get_param: network }
+      fixed_ips: [{"subnet": { get_param: subnet }, "ip_address": { get_param: internal_ip }}]
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: instance_name }
+      flavor: { get_param: instance_type }
+      image: { get_param: image_name }
+      networks:
+        - port: { get_resource: instance_port }
+        
+
+outputs:
+  instance_internel_ip:
+    description: The IP address of the deployed instance
+    value: { get_attr: [instance, first_address] }  
+    
