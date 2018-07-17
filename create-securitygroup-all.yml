@@ -1,0 +1,12 @@
+heat_template_version: 2016-04-08
+
+description: The template is used to create a all-access security group under project
+
+    
+resources:
+  project:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      description: all-access security group
+      name: all-access
+      rules: [{"direction": "ingress", "remote_ip_prefix": "0.0.0.0/0", "ethertype": "IPv4"}, {"direction": "ingress", "remote_ip_prefix": "::/0", "ethertype": "IPv6"}, {"direction": "ingress", "remote_ip_prefix": "0.0.0.0/0", "ethertype": "IPv4", "protocol": "icmp"}, {"direction": "ingress", "remote_ip_prefix": "0.0.0.0/0", "port_range_min": 1, "ethertype": "IPv4", "port_range_max": 65535, "protocol": "tcp"}, {"direction": "ingress", "remote_ip_prefix": "0.0.0.0/0", "port_range_min": 1, "ethertype": "IPv4", "port_range_max": 65535, "protocol": "udp"}, {"direction": "egress", "remote_ip_prefix": "0.0.0.0/0", "ethertype": "IPv4"}, {"direction": "egress", "remote_ip_prefix": "::/0", "ethertype": "IPv6"}, {"direction": "egress", "remote_ip_prefix": "0.0.0.0/0", "ethertype": "IPv4", "protocol": "icmp"}, {"direction": "egress", "remote_ip_prefix": "0.0.0.0/0", "port_range_min": 1, "ethertype": "IPv4", "port_range_max": 65535, "protocol": "tcp"}, {"direction": "egress", "remote_ip_prefix": "0.0.0.0/0", "port_range_min": 1, "ethertype": "IPv4", "port_range_max": 65535, "protocol": "udp"}]

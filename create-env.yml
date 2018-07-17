@@ -1,0 +1,189 @@
+heat_template_version: 2016-04-08
+
+description: The template is used to create the environment including 1.project 2.user 3.network 4.subnet 5.router 6.test vm
+
+
+parameter_groups:
+- label: project
+  description: project params
+  parameters:
+  - env
+  - env_desc
+  - env_user
+  - env_user_desc
+  - env_user_pass
+
+- label: network
+  description: network params
+  parameters:
+  - env_network 
+  
+- label: subnet
+  description: subnet params
+  parameters:
+  - env_subnetwork
+  - enable_dhcp_param
+  - cidr_param
+  - dns_nameservers_param
+ 
+- label: router
+  description: router params
+  parameters:
+  - env_router
+  - external_gateway_info_network
+
+  
+parameters:
+  env:
+    type: string
+    label: Environment
+    description: Choose your environment
+    default: development
+    constraints:
+      - allowed_values: [ guest, survey, development, test, release, production ]
+        description: Value must be guest, survey, development, test, release and production
+        
+  env_desc:
+    type: string
+    label: Environment description
+    description: Description of the environment
+    default: environment description
+    
+  env_user:
+    type: string
+    label: Default user
+    description: Default user of the environment
+  
+  env_user_desc:
+    type: string
+    label: Default user's description
+    description: Description of the default user
+    default: user description
+    
+  env_user_pass:
+    type: string
+    label: Default user's password
+    description: Password of the default user
+    hidden: true
+    
+  env_router:
+    type: string
+    label: Router
+    description: Default router. Format is 'xxx_router'. Such as 'development_router'
+    default: default_router 
+    
+  env_network:
+    type: string
+    label: Internal network
+    description: Default internal network. Format 'xxx_internal_net'. Such as 'development_internel_net'
+    default: default_internal_net 
+    
+  env_subnetwork:
+    type: string
+    label: Subnetwork
+    description: Default subnetwork of the default internal network. Format 'xxx_internal_net__subnet'. Such as 'development_internel_net__subnet'
+    default: default_internal_net__subnet
+    
+  enable_dhcp_param:  
+    type: boolean
+    label: Enable subnet dhcp or not
+    description: The instance will be assigned ip addresss automatically by dhcp agent when dhcp is enabled. And differnt ip under multiple subnets can reach eachother through dhcp agent.
+    default: true
+    
+  cidr_param:
+    type: string
+    label: Ip address pools
+    description: The cidr of the subnet
+    default: 192.168.111.0/24
+    constraints:
+      - allowed_values: [ 192.168.111.0/24, 192.168.112.0/24, 192.168.113.0/24, 192.168.114.0/24, 192.168.115.0/24 ]
+      
+  dns_nameservers_param:
+    type: comma_delimited_list
+    label: DNS server list
+    description: DNS servers list, separated by commas
+    default: 114.114.114.114
+    
+  external_gateway_info_network:
+    type: string
+    label: External network 's id or name
+    description: ID or name of the external network for the gateway. Please make sure the external network you use does exist!
+    default: admin_floating_net
+    
+  demo_vm:
+    type: boolean
+    label: Demo VM
+    description: Whether to create a demo vm
+    default: true
+    
+    
+resources:
+  project:
+    type: OS::Keystone::Project
+    properties:
+      description: { get_param: env_desc }
+      enabled: true
+      name: { get_param: env }
+
+  member_user:
+    type: OS::Keystone::User
+    properties:
+      default_project: { get_resource: project }
+      description: { get_param: env_user_desc }
+      enabled: true
+      name: { get_param: env_user }
+      password: { get_param: env_user_pass }
+      roles: [{"project": { get_resource: project }, "role": "_member_"}]    
+      
+  internal_net:
+    type: OS::Neutron::Net
+    properties:
+      name: { get_param: env_network }
+      tenant_id: { get_resource: project }    
+      
+  internal_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: { get_param: env_subnetwork }
+      network_id: { get_resource: internal_net }
+      enable_dhcp: { get_param: enable_dhcp_param }
+      cidr: { get_param: cidr_param }
+      dns_nameservers: { get_param: dns_nameservers_param }
+      tenant_id: { get_resource: project }  
+      
+  internal_router:
+    type: OS::Neutron::Router
+    properties:
+      name: { get_param: env_router }
+      external_gateway_info: { network: { get_param: external_gateway_info_network } }
+      value_specs: {"tenant_id": { get_resource: project }}
+      
+  internal_interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: internal_router }
+      subnet: { get_resource: internal_subnet }
+      
+  instance:
+    type: OS::Nova::Server
+    properties:
+      name: test
+      flavor: m1.tiny
+      image: TestVM
+      networks:
+        - network: { get_resource: internal_net }
+        - subnet: { get_resource: internal_subnet }
+        
+outputs:
+  environment_type: 
+    description: The type of the deployed environment. Same to the project name.
+    value: { get_param: env }
+  member_user_name:
+    description: The member's name.
+    value: { get_param: [ env_params, { get_param: env }, user, member, name ] }  
+  member_user_password:
+    description: The member's passsowrd.
+    value: { get_param: [ env_params, { get_param: env }, user, member, password ] }
+  instance_internel_ip:
+    description: The IP address of the deployed instance
+    value: { get_attr: [instance, first_address] } 
