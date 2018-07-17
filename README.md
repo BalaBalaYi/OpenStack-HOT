@@ -1,2 +1,2 @@
 # OpenStack-HOT
-Commonly used templates
+Commonly used templates base on Mitaka
