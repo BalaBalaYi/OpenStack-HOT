@@ -1,0 +1,25 @@
+heat_template_version: 2016-04-08
+
+description: Simple template to allocate a floatingip under project
+
+parameters:
+  external_network:
+    type: string
+    label: network
+    description: Externel Network's id or name
+    default: admin_floating_net
+    
+  ip_address:
+    type: string
+    label: Floating IP Address
+    description: The ip address for the floatingip. Cannot be conflict.
+    constraints:
+      - allowed_pattern: "(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9]{1,2})([.](25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9]{1,2})){3}"
+        description: Ip address must be ip format
+
+resources:
+  floatingip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_ip_address: { get_param: ip_address }
+      floating_network: { get_param: external_network }
