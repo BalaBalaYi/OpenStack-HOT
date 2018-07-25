@@ -1,12 +1,14 @@
 heat_template_version: 2016-04-08
 
-description: Template to deploy a complex instance with specified 1)Availability Zone  2)Network and Subnet  3)Internal IP  4)Floating IP  5)Security Group  6)Volume  7)User-data or Metadata
+description: Template to deploy a complex instance with specified 1)Availability Zone  2)Network and Subnet  3)Internal IP  4)Floating IP  5)Security Group  6)Volume  7)User-data
 
 parameter_groups:
 - label: basic
   description: basic params
   parameters:
   - instance_name
+  - instance_password
+  - instance_hostname
   - image_name
   - instance_type
   - availability_zone_name
@@ -36,9 +38,21 @@ parameters:
   instance_name:
     type: string
     label: Instace Name
-    description: A User Defined Name for the instance
+    description: Name for the instance
     default: new_instance
     
+  instance_password:
+    type: string
+    label: Root Password
+    description: Password for the instance's root user
+    hidden: true 
+    
+  instance_hostname:
+    type: string
+    label: Instace Hostname
+    description: Hostname for the instance. e.g. test1.antiy.com
+    default: localhost  
+        
   image_name:
     type: string
     label: Image
@@ -69,7 +83,7 @@ parameters:
       - custom_constraint: neutron.network
     
   internal_subnet:
-    type: comma_delimited_list
+    type: string
     label: Internal Subnet
     description: The subnet used for the instance. Internel subnet's id or name
     default: default_internal_net__subnet
@@ -145,9 +159,90 @@ resources:
       security_groups: { get_param: security_group }
       block_device_mapping_v2: [{"device_name": "vda", "volume_id": { get_resource: bootable_volume }, "delete_on_termination": { get_param: volume_delete_policy } }]
       networks: [{"port": { get_resource: instance_port }, "floating_ip": { get_resource: instance_floatingip } }]
+      user_data_format: RAW
+      user_data: 
+        str_replace:
+          template: |
+            #cloud-config
+            users:
+             - default
+            fqdn: $HOSTNAME
+            manage_etc_hosts: true
+            disable_root: 0
+            ssh_pwauth: 1
+            chpasswd:
+              list: |
+                root:$PASSWORD
+              expire: False
+            locale: en_US.UTF-8
+            timezone: Asia/Shanghai
+            mount_default_fields: [~, ~, 'auto', 'defaults,nofail', '0', '2']
+            resize_rootfs_tmp: /dev
+            ssh_deletekeys:   0
+            ssh_genkeytypes:  ~
+            def_log_file: /var/log/my-logging-file.log
+            syslog_fix_perms: ~
+            manage_resolv_conf: true
+            resolv_conf:
+              nameservers: ['114.114.114.114']
+              options:
+                rotate: true
+                timeout: 1
+            system_info:
+              default_user:
+                name: root
+                lock_passwd: true
+                gecos: Cloud User
+                groups: [wheel, adm, systemd-journal]
+                sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+                shell: /bin/bash
+              distro: rhel
+              paths:
+                cloud_dir: /var/lib/cloud
+                templates_dir: /etc/cloud/templates
+              ssh_svcname: sshd
+            final_message: "The system is finally up, after $UPTIME seconds"
+            cloud_init_modules:
+              - migrator
+              - bootcmd
+              - write_files
+              - growpart
+              - resizefs
+              - set_hostname
+              - update_hostname
+              - update_etc_hosts
+              - resolv_conf
+              - rsyslog
+              - users_groups
+              - ssh
+            cloud_config_modules:
+              - mounts
+              - locale
+              - set-passwords
+              - yum_add_repo
+              - package_update_upgrade_install
+              - timezone
+              - puppet
+              - chef
+              - salt_minion
+              - mcollective
+              - disable_ec2_metadata
+              - runcmd
+            cloud_final_modules:
+            #  - rightscale_userdata
+            #  - scriptsr_per_once
+            #  - scriptsr_per_boot
+            #  - scriptsr_per_instance
+            #  - scripts_user
+            #  - ssh_authkey_fingerprints
+            #  - keys_to_console
+            #  - phone_home
+              - final_message
+          params:
+           $PASSWORD: { get_param: instance_password }
+           $HOSTNAME: { get_param: instance_hostname }
 
-   
-
+            
 outputs:
   instance_internel_ip:
     description: The internal IP address of the deployed instance
