@@ -49,7 +49,7 @@ parameters:
     
   instance_hostname:
     type: string
-    label: Instace Hostname
+    label: Instace Hostname(FQDN)
     description: Hostname for the instance. e.g. test1.antiy.com
     default: localhost  
         
