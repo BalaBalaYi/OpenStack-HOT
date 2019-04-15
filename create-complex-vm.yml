@@ -50,7 +50,7 @@ parameters:
   instance_hostname:
     type: string
     label: Instace Hostname(FQDN)
-    description: Hostname for the instance. e.g. test1.antiy.com
+    description: Hostname for the instance. e.g. test1.test.com
     default: localhost  
         
   image_name:
